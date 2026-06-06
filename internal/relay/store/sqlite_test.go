@@ -19,6 +19,8 @@ func TestSQLiteStoreCreatesAndLooksUpRoutes(t *testing.T) {
 		Subdomain:    "myapp",
 		PublicHost:   "myapp.example.com",
 		PublicURL:    "https://myapp.example.com",
+		ProjectName:  "My App",
+		ProjectPath:  "/Users/whoami/Desktop/scripts/myapp",
 		LocalHost:    "127.0.0.1",
 		LocalPort:    3000,
 		UpstreamHost: "myapp.test",
@@ -39,7 +41,11 @@ func TestSQLiteStoreCreatesAndLooksUpRoutes(t *testing.T) {
 		t.Fatalf("GetRouteByHost returned error: %v", err)
 	}
 
-	if got.ID != route.ID || got.RemotePort != 18080 || got.UpstreamHost != "myapp.test" {
+	if got.ID != route.ID ||
+		got.RemotePort != 18080 ||
+		got.UpstreamHost != "myapp.test" ||
+		got.ProjectName != "My App" ||
+		got.ProjectPath != "/Users/whoami/Desktop/scripts/myapp" {
 		t.Fatalf("unexpected route: %#v", got)
 	}
 }
@@ -52,6 +58,12 @@ func TestSQLiteStoreMigratesUpstreamHostColumn(t *testing.T) {
 	}
 	if _, err := store.db.Exec(`ALTER TABLE routes DROP COLUMN upstream_host`); err != nil {
 		t.Fatalf("DROP COLUMN upstream_host returned error: %v", err)
+	}
+	if _, err := store.db.Exec(`ALTER TABLE routes DROP COLUMN project_name`); err != nil {
+		t.Fatalf("DROP COLUMN project_name returned error: %v", err)
+	}
+	if _, err := store.db.Exec(`ALTER TABLE routes DROP COLUMN project_path`); err != nil {
+		t.Fatalf("DROP COLUMN project_path returned error: %v", err)
 	}
 	if err := store.Close(); err != nil {
 		t.Fatalf("Close returned error: %v", err)
@@ -68,6 +80,8 @@ func TestSQLiteStoreMigratesUpstreamHostColumn(t *testing.T) {
 		Subdomain:    "myapp",
 		PublicHost:   "myapp.example.com",
 		PublicURL:    "https://myapp.example.com",
+		ProjectName:  "My App",
+		ProjectPath:  "/Users/whoami/Desktop/scripts/myapp",
 		LocalHost:    "127.0.0.1",
 		LocalPort:    3000,
 		UpstreamHost: "myapp.test",

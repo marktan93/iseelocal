@@ -93,6 +93,12 @@ func countRoutes(routes []contracts.Route, status contracts.RouteStatus) int {
 }
 
 var dashboardTemplate = template.Must(template.New("dashboard").Funcs(template.FuncMap{
+	"projectTitle": func(route contracts.Route) string {
+		if strings.TrimSpace(route.ProjectName) != "" {
+			return route.ProjectName
+		}
+		return route.Subdomain
+	},
 	"targetHost": func(route contracts.Route) string {
 		if route.UpstreamHost != "" {
 			return route.UpstreamHost
@@ -107,28 +113,37 @@ var dashboardTemplate = template.Must(template.New("dashboard").Funcs(template.F
   <meta http-equiv="refresh" content="15">
   <title>iseelocal VPS Dashboard</title>
   <style>
-    :root { color-scheme: dark; --bg:#07111f; --panel:#0f1b2d; --muted:#8ea3bd; --line:#1f314a; --ok:#28d17c; --off:#f5b84b; --text:#eaf2ff; }
+    :root { color-scheme: dark; --bg:#07111f; --panel:#0f1b2d; --muted:#8ea3bd; --line:#1f314a; --ok:#28d17c; --off:#f5b84b; --text:#eaf2ff; --accent:#7cc7ff; }
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
-    main { max-width:1180px; margin:0 auto; padding:32px 20px; }
+    main { max-width:1320px; margin:0 auto; padding:32px 20px; }
     header { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:24px; }
     h1 { margin:0 0 8px; font-size:28px; }
     .muted { color:var(--muted); }
     .cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:22px; }
-    .card, table { background:var(--panel); border:1px solid var(--line); border-radius:16px; }
+    .card, .route-card { background:var(--panel); border:1px solid var(--line); border-radius:16px; }
     .card { padding:16px; }
     .card strong { display:block; font-size:24px; margin-bottom:4px; }
-    table { width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; }
-    th, td { padding:13px 14px; border-bottom:1px solid var(--line); text-align:left; vertical-align:top; }
-    th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
-    tr:last-child td { border-bottom:0; }
-    a { color:#7cc7ff; text-decoration:none; }
+    .route-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:16px; }
+    .route-card { overflow:hidden; }
+    .preview { position:relative; height:220px; overflow:hidden; background:#050b14; border-bottom:1px solid var(--line); }
+    .preview iframe { width:1440px; height:880px; border:0; transform:scale(.26); transform-origin:0 0; pointer-events:none; background:white; }
+    .preview-overlay { position:absolute; inset:0; box-shadow:inset 0 -80px 70px rgba(7,17,31,.85); pointer-events:none; }
+    .route-body { padding:16px; }
+    .route-title { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .route-title h2 { margin:0; font-size:18px; line-height:1.25; }
+    .meta { display:grid; gap:8px; margin-top:12px; }
+    .meta-row { display:grid; grid-template-columns:92px minmax(0,1fr); gap:10px; align-items:start; }
+    .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.07em; }
+    .value { min-width:0; overflow-wrap:anywhere; }
+    a { color:var(--accent); text-decoration:none; }
     a:hover { text-decoration:underline; }
     code { color:#c9d7e8; background:#091326; border:1px solid var(--line); border-radius:8px; padding:2px 6px; white-space:nowrap; }
     .status { display:inline-flex; align-items:center; gap:6px; font-weight:700; }
     .dot { width:9px; height:9px; border-radius:999px; background:var(--off); }
     .online .dot { background:var(--ok); box-shadow:0 0 14px var(--ok); }
-    @media (max-width: 900px) { .cards { grid-template-columns:repeat(2,minmax(0,1fr)); } table { font-size:14px; } }
-    @media (max-width: 640px) { header { display:block; } .cards { grid-template-columns:1fr; } th:nth-child(3), td:nth-child(3), th:nth-child(4), td:nth-child(4) { display:none; } }
+    .empty { padding:18px; background:var(--panel); border:1px solid var(--line); border-radius:16px; }
+    @media (max-width: 900px) { .cards { grid-template-columns:repeat(2,minmax(0,1fr)); } .route-grid { grid-template-columns:1fr; } }
+    @media (max-width: 640px) { header { display:block; } .cards { grid-template-columns:1fr; } .preview { height:170px; } .preview iframe { transform:scale(.2); } }
   </style>
 </head>
 <body>
@@ -146,24 +161,33 @@ var dashboardTemplate = template.Must(template.New("dashboard").Funcs(template.F
     <div class="card"><strong>{{.BaseDomain}}</strong><span class="muted">Base domain</span></div>
     <div class="card"><strong>{{.SSHHost}}:{{.SSHPort}}</strong><span class="muted">Tunnel SSH</span></div>
   </section>
-  <table>
-    <thead>
-      <tr><th>Status</th><th>Public URL</th><th>Local target</th><th>VPS remote</th><th>Last heartbeat</th></tr>
-    </thead>
-    <tbody>
-      {{range .Routes}}
-      <tr>
-        <td><span class="status {{.Status}}"><span class="dot"></span>{{.Status}}</span></td>
-        <td><a href="{{.PublicURL}}" target="_blank" rel="noreferrer">{{.PublicURL}}</a><br><span class="muted">{{.Subdomain}}</span></td>
-        <td><code>{{targetHost .}}</code><br><span class="muted">{{.LocalHost}}:{{.LocalPort}}</span></td>
-        <td><code>{{.RemoteHost}}:{{.RemotePort}}</code></td>
-        <td>{{if .LastHeartbeatAt}}{{.LastHeartbeatAt.Format "2006-01-02 15:04:05 UTC"}}{{else}}<span class="muted">never</span>{{end}}</td>
-      </tr>
-      {{else}}
-      <tr><td colspan="5" class="muted">No routes yet.</td></tr>
-      {{end}}
-    </tbody>
-  </table>
+  {{if .Routes}}
+  <section class="route-grid">
+    {{range .Routes}}
+    <article class="route-card">
+      <a class="preview" href="{{.PublicURL}}" target="_blank" rel="noreferrer" aria-label="Open {{projectTitle .}}">
+        <iframe src="{{.PublicURL}}" loading="lazy" title="{{projectTitle .}} preview"></iframe>
+        <span class="preview-overlay"></span>
+      </a>
+      <div class="route-body">
+        <div class="route-title">
+          <h2>{{projectTitle .}}</h2>
+          <span class="status {{.Status}}"><span class="dot"></span>{{.Status}}</span>
+        </div>
+        <div class="meta">
+          <div class="meta-row"><span class="label">Public</span><span class="value"><a href="{{.PublicURL}}" target="_blank" rel="noreferrer">{{.PublicURL}}</a></span></div>
+          <div class="meta-row"><span class="label">Folder</span><span class="value">{{if .ProjectPath}}<code>{{.ProjectPath}}</code>{{else}}<span class="muted">unknown</span>{{end}}</span></div>
+          <div class="meta-row"><span class="label">Target</span><span class="value"><code>{{targetHost .}}</code> <span class="muted">via {{.LocalHost}}:{{.LocalPort}}</span></span></div>
+          <div class="meta-row"><span class="label">Remote</span><span class="value"><code>{{.RemoteHost}}:{{.RemotePort}}</code></span></div>
+          <div class="meta-row"><span class="label">Heartbeat</span><span class="value">{{if .LastHeartbeatAt}}{{.LastHeartbeatAt.Format "2006-01-02 15:04:05 UTC"}}{{else}}<span class="muted">never</span>{{end}}</span></div>
+        </div>
+      </div>
+    </article>
+    {{end}}
+  </section>
+  {{else}}
+  <div class="empty muted">No routes yet.</div>
+  {{end}}
 </main>
 </body>
 </html>`))
@@ -219,6 +243,8 @@ func (s *Server) createRoute(w http.ResponseWriter, r *http.Request) {
 		Subdomain:    subdomain,
 		PublicHost:   strings.ToLower(publicHost),
 		PublicURL:    publicScheme + "://" + strings.ToLower(publicHost),
+		ProjectName:  strings.TrimSpace(req.ProjectName),
+		ProjectPath:  strings.TrimSpace(req.ProjectPath),
 		LocalHost:    strings.TrimSpace(req.LocalHost),
 		LocalPort:    req.LocalPort,
 		UpstreamHost: upstreamHost,

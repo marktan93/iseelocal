@@ -61,6 +61,8 @@ func TestServerRendersDashboard(t *testing.T) {
 		Subdomain:    "phpmyadmin",
 		PublicHost:   "phpmyadmin.example.com",
 		PublicURL:    "http://phpmyadmin.example.com",
+		ProjectName:  "phpMyAdmin",
+		ProjectPath:  "/Users/whoami/Desktop/scripts/phpmyadmin",
 		LocalHost:    "127.0.0.1",
 		LocalPort:    80,
 		UpstreamHost: "phpmyadmin.test",
@@ -85,7 +87,12 @@ func TestServerRendersDashboard(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
 	}
 	body := res.Body.String()
-	if !strings.Contains(body, "iseelocal VPS Dashboard") || !strings.Contains(body, "phpmyadmin.test") || !strings.Contains(body, "http://phpmyadmin.example.com") {
+	if !strings.Contains(body, "iseelocal VPS Dashboard") ||
+		!strings.Contains(body, "phpMyAdmin") ||
+		!strings.Contains(body, "/Users/whoami/Desktop/scripts/phpmyadmin") ||
+		!strings.Contains(body, "phpmyadmin.test") ||
+		!strings.Contains(body, "http://phpmyadmin.example.com") ||
+		!strings.Contains(body, "<iframe") {
 		t.Fatalf("dashboard did not include expected route details: %s", body)
 	}
 }
@@ -99,7 +106,7 @@ func TestServerCreatesRouteWithUpstreamHost(t *testing.T) {
 
 	server := NewServer(Config{BaseDomain: "example.com", SSHHost: "vps.example.com", SSHUser: "tunnel"}, st, ports.NewAllocator(18080, 18090))
 
-	body := bytes.NewBufferString(`{"subdomain":"phpmyadmin","local_host":"127.0.0.1","local_port":80,"upstream_host":"PhpMyAdmin.Test","protocol":"http","allow_sensitive_target":true}`)
+	body := bytes.NewBufferString(`{"subdomain":"phpmyadmin","project_name":"phpMyAdmin","project_path":"/Users/whoami/Desktop/scripts/phpmyadmin","local_host":"127.0.0.1","local_port":80,"upstream_host":"PhpMyAdmin.Test","protocol":"http","allow_sensitive_target":true}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/routes", body)
 	res := httptest.NewRecorder()
 
@@ -115,6 +122,9 @@ func TestServerCreatesRouteWithUpstreamHost(t *testing.T) {
 	}
 	if route.UpstreamHost != "phpmyadmin.test" {
 		t.Fatalf("expected upstream host phpmyadmin.test, got %q", route.UpstreamHost)
+	}
+	if route.ProjectName != "phpMyAdmin" || route.ProjectPath != "/Users/whoami/Desktop/scripts/phpmyadmin" {
+		t.Fatalf("unexpected project metadata: %#v", route)
 	}
 }
 

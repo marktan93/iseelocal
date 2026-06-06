@@ -20,6 +20,8 @@ type Route struct {
 	Subdomain       string      `json:"subdomain"`
 	PublicHost      string      `json:"public_host"`
 	PublicURL       string      `json:"public_url"`
+	ProjectName     string      `json:"project_name,omitempty"`
+	ProjectPath     string      `json:"project_path,omitempty"`
 	LocalHost       string      `json:"local_host"`
 	LocalPort       int         `json:"local_port"`
 	UpstreamHost    string      `json:"upstream_host,omitempty"`
@@ -34,6 +36,8 @@ type Route struct {
 
 type CreateRouteRequest struct {
 	Subdomain            string `json:"subdomain"`
+	ProjectName          string `json:"project_name,omitempty"`
+	ProjectPath          string `json:"project_path,omitempty"`
 	LocalHost            string `json:"local_host"`
 	LocalPort            int    `json:"local_port"`
 	UpstreamHost         string `json:"upstream_host,omitempty"`

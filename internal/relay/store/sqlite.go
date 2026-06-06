@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS routes (
 	subdomain TEXT NOT NULL UNIQUE,
 	public_host TEXT NOT NULL UNIQUE,
 	public_url TEXT NOT NULL,
+	project_name TEXT NOT NULL DEFAULT '',
+	project_path TEXT NOT NULL DEFAULT '',
 	local_host TEXT NOT NULL,
 	local_port INTEGER NOT NULL,
 	upstream_host TEXT NOT NULL DEFAULT '',
@@ -59,16 +61,22 @@ CREATE INDEX IF NOT EXISTS idx_routes_public_host ON routes(public_host);
 	if err != nil {
 		return err
 	}
-	return s.ensureColumn("routes", "upstream_host", "TEXT NOT NULL DEFAULT ''")
+	if err := s.ensureColumn("routes", "upstream_host", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	if err := s.ensureColumn("routes", "project_name", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	return s.ensureColumn("routes", "project_path", "TEXT NOT NULL DEFAULT ''")
 }
 
 func (s *SQLiteStore) CreateRoute(route contracts.Route) error {
 	_, err := s.db.Exec(`
 INSERT INTO routes (
-	id, subdomain, public_host, public_url, local_host, local_port,
+	id, subdomain, public_host, public_url, project_name, project_path, local_host, local_port,
 	upstream_host, remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`, route.ID, route.Subdomain, strings.ToLower(route.PublicHost), route.PublicURL, route.LocalHost, route.LocalPort,
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`, route.ID, route.Subdomain, strings.ToLower(route.PublicHost), route.PublicURL, route.ProjectName, route.ProjectPath, route.LocalHost, route.LocalPort,
 		route.UpstreamHost, route.RemoteHost, route.RemotePort, route.Protocol, route.Status, formatTime(route.CreatedAt), formatTime(route.UpdatedAt), formatOptionalTime(route.LastHeartbeatAt))
 	return err
 }
@@ -76,7 +84,7 @@ INSERT INTO routes (
 func (s *SQLiteStore) ListRoutes() ([]contracts.Route, error) {
 	rows, err := s.db.Query(`
 SELECT id, subdomain, public_host, public_url, local_host, local_port,
-	upstream_host, remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
+	project_name, project_path, upstream_host, remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
 FROM routes
 ORDER BY created_at DESC
 `)
@@ -157,7 +165,7 @@ func (s *SQLiteStore) Heartbeat(id string) error {
 func (s *SQLiteStore) getRoute(where string, arg any) (contracts.Route, error) {
 	row := s.db.QueryRow(`
 SELECT id, subdomain, public_host, public_url, local_host, local_port,
-	upstream_host, remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
+	project_name, project_path, upstream_host, remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
 FROM routes
 WHERE `+where+`
 LIMIT 1
@@ -186,6 +194,8 @@ func scanRoute(scanner routeScanner) (contracts.Route, error) {
 		&route.PublicURL,
 		&route.LocalHost,
 		&route.LocalPort,
+		&route.ProjectName,
+		&route.ProjectPath,
 		&route.UpstreamHost,
 		&route.RemoteHost,
 		&route.RemotePort,

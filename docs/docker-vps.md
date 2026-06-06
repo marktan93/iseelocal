@@ -102,7 +102,7 @@ Laravel Herd sites usually share `127.0.0.1:80` and route by the HTTP `Host` hea
 curl -sS -X POST http://api.yourdomain.com/api/routes \
   -H "Authorization: Bearer $ISEELOCAL_API_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"subdomain":"phpmyadmin","local_host":"127.0.0.1","local_port":80,"upstream_host":"phpmyadmin.test","protocol":"http"}'
+  -d '{"subdomain":"phpmyadmin","project_name":"phpMyAdmin","project_path":"/Users/whoami/Desktop/scripts/phpmyadmin","local_host":"127.0.0.1","local_port":80,"upstream_host":"phpmyadmin.test","protocol":"http"}'
 ```
 
 Then run the agent using the returned remote port and `--local-port 80`. Repeat with each Herd site name, for example `performance-track.test` or `lg-subscribe.test`.
