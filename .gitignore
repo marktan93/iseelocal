@@ -9,7 +9,7 @@ target/
 *.db
 *.db-shm
 *.db-wal
-iseelocal-agent
-iseelocal-relay
+/iseelocal-agent
+/iseelocal-relay
 apps/desktop/src-tauri/gen/
 apps/desktop/src-tauri/target/

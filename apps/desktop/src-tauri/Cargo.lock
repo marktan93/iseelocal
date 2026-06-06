@@ -540,15 +540,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "iseelocal"
-version = "0.1.0"
-dependencies = [
- "serde",
- "tauri",
- "tauri-build",
-]
-
-[[package]]
 name = "digest"
 version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1504,6 +1495,15 @@ name = "ipnet"
 version = "2.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d98f6fed1fde3f8c21bc40a1abb88dd75e67924f9cffc3ef95607bad8017f8e2"
+
+[[package]]
+name = "iseelocal"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tauri",
+ "tauri-build",
+]
 
 [[package]]
 name = "itoa"

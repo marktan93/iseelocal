@@ -12,11 +12,11 @@ import (
 	"syscall"
 	"time"
 
-	"deveverywhere/internal/relay/api"
-	"deveverywhere/internal/relay/auth"
-	"deveverywhere/internal/relay/ingress"
-	"deveverywhere/internal/relay/ports"
-	"deveverywhere/internal/relay/store"
+	"iseelocal/internal/relay/api"
+	"iseelocal/internal/relay/auth"
+	"iseelocal/internal/relay/ingress"
+	"iseelocal/internal/relay/ports"
+	"iseelocal/internal/relay/store"
 )
 
 func main() {
@@ -91,24 +91,24 @@ type config struct {
 
 func loadConfig() (config, error) {
 	cfg := config{
-		apiToken:        os.Getenv("DEVEVERYWHERE_API_TOKEN"),
-		baseDomain:      os.Getenv("DEVEVERYWHERE_BASE_DOMAIN"),
-		sshHost:         os.Getenv("DEVEVERYWHERE_SSH_HOST"),
-		sshUser:         getenv("DEVEVERYWHERE_SSH_USER", "tunnel"),
-		databasePath:    getenv("DEVEVERYWHERE_DATABASE", "./deveverywhere.db"),
-		apiAddr:         getenv("DEVEVERYWHERE_API_ADDR", "127.0.0.1:8081"),
-		ingressAddr:     getenv("DEVEVERYWHERE_INGRESS_ADDR", "127.0.0.1:8080"),
-		remotePortStart: getenvInt("DEVEVERYWHERE_REMOTE_PORT_START", 18080),
-		remotePortEnd:   getenvInt("DEVEVERYWHERE_REMOTE_PORT_END", 18999),
+		apiToken:        os.Getenv("ISEELOCAL_API_TOKEN"),
+		baseDomain:      os.Getenv("ISEELOCAL_BASE_DOMAIN"),
+		sshHost:         os.Getenv("ISEELOCAL_SSH_HOST"),
+		sshUser:         getenv("ISEELOCAL_SSH_USER", "tunnel"),
+		databasePath:    getenv("ISEELOCAL_DATABASE", "./iseelocal.db"),
+		apiAddr:         getenv("ISEELOCAL_API_ADDR", "127.0.0.1:8081"),
+		ingressAddr:     getenv("ISEELOCAL_INGRESS_ADDR", "127.0.0.1:8080"),
+		remotePortStart: getenvInt("ISEELOCAL_REMOTE_PORT_START", 18080),
+		remotePortEnd:   getenvInt("ISEELOCAL_REMOTE_PORT_END", 18999),
 	}
 	if cfg.apiToken == "" {
-		return config{}, fmt.Errorf("DEVEVERYWHERE_API_TOKEN is required")
+		return config{}, fmt.Errorf("ISEELOCAL_API_TOKEN is required")
 	}
 	if cfg.baseDomain == "" {
-		return config{}, fmt.Errorf("DEVEVERYWHERE_BASE_DOMAIN is required")
+		return config{}, fmt.Errorf("ISEELOCAL_BASE_DOMAIN is required")
 	}
 	if cfg.sshHost == "" {
-		return config{}, fmt.Errorf("DEVEVERYWHERE_SSH_HOST is required")
+		return config{}, fmt.Errorf("ISEELOCAL_SSH_HOST is required")
 	}
 	return cfg, nil
 }

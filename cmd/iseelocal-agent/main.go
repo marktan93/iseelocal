@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"deveverywhere/internal/agent/healthcheck"
-	agentssh "deveverywhere/internal/agent/ssh"
-	"deveverywhere/internal/agent/supervisor"
-	"deveverywhere/internal/shared/contracts"
+	"iseelocal/internal/agent/healthcheck"
+	agentssh "iseelocal/internal/agent/ssh"
+	"iseelocal/internal/agent/supervisor"
+	"iseelocal/internal/shared/contracts"
 )
 
 func main() {
@@ -113,7 +113,7 @@ func parseTunnelSpec(name string, args []string) (agentssh.TunnelSpec, error) {
 
 func usage() error {
 	return fmt.Errorf(`usage:
-  deveverywhere-agent check --host 127.0.0.1 --port 3000
-  deveverywhere-agent ssh-args --ssh-host vps.example.com --remote-port 18080 --local-port 3000
-  deveverywhere-agent run-ssh --ssh-host vps.example.com --remote-port 18080 --local-port 3000`)
+	iseelocal-agent check --host 127.0.0.1 --port 3000
+	iseelocal-agent ssh-args --ssh-host vps.example.com --remote-port 18080 --local-port 3000
+	iseelocal-agent run-ssh --ssh-host vps.example.com --remote-port 18080 --local-port 3000`)
 }
