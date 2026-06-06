@@ -67,6 +67,7 @@ func TestProxyReturnsNotFoundForUnknownHost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("OpenSQLite returned error: %v", err)
 	}
+
 	defer st.Close()
 
 	proxy := NewProxy(st, Config{MaxBodyBytes: 1024 * 1024})
@@ -78,6 +79,59 @@ func TestProxyReturnsNotFoundForUnknownHost(t *testing.T) {
 
 	if res.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", res.Code)
+	}
+}
+
+func TestProxyOverridesUpstreamHost(t *testing.T) {
+	var gotHost string
+	local := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotHost = r.Host
+		_, _ = w.Write([]byte("herd app"))
+	}))
+	defer local.Close()
+
+	port, err := strconv.Atoi(local.URL[stringsLastIndex(local.URL, ":")+1:])
+	if err != nil {
+		t.Fatalf("parse local server port: %v", err)
+	}
+
+	st, err := store.OpenSQLite(t.TempDir() + "/routes.db")
+	if err != nil {
+		t.Fatalf("OpenSQLite returned error: %v", err)
+	}
+	defer st.Close()
+
+	route := contracts.Route{
+		ID:           "route_herd",
+		Subdomain:    "phpmyadmin",
+		PublicHost:   "phpmyadmin.example.com",
+		PublicURL:    "https://phpmyadmin.example.com",
+		LocalHost:    "127.0.0.1",
+		LocalPort:    80,
+		UpstreamHost: "phpmyadmin.test",
+		RemoteHost:   "127.0.0.1",
+		RemotePort:   port,
+		Protocol:     "http",
+		Status:       contracts.RouteStatusOnline,
+		CreatedAt:    time.Now().UTC(),
+		UpdatedAt:    time.Now().UTC(),
+	}
+	if err := st.CreateRoute(route); err != nil {
+		t.Fatalf("CreateRoute returned error: %v", err)
+	}
+
+	proxy := NewProxy(st, Config{MaxBodyBytes: 1024 * 1024})
+	req := httptest.NewRequest(http.MethodGet, "http://phpmyadmin.example.com/", nil)
+	req.Host = "phpmyadmin.example.com"
+	res := httptest.NewRecorder()
+
+	proxy.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	if gotHost != "phpmyadmin.test" {
+		t.Fatalf("expected upstream Host phpmyadmin.test, got %q", gotHost)
 	}
 }
 

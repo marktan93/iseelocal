@@ -38,9 +38,11 @@ func run() error {
 	defer st.Close()
 
 	apiHandler := auth.BearerMiddleware(cfg.apiToken, api.NewServer(api.Config{
-		BaseDomain: cfg.baseDomain,
-		SSHHost:    cfg.sshHost,
-		SSHUser:    cfg.sshUser,
+		BaseDomain:   cfg.baseDomain,
+		PublicScheme: cfg.publicScheme,
+		SSHHost:      cfg.sshHost,
+		SSHUser:      cfg.sshUser,
+		SSHPort:      cfg.sshPort,
 	}, st, ports.NewAllocator(cfg.remotePortStart, cfg.remotePortEnd)))
 
 	ingressHandler := accessLog(ingress.NewProxy(st, ingress.Config{MaxBodyBytes: 10 << 20}))
@@ -80,8 +82,10 @@ func run() error {
 type config struct {
 	apiToken        string
 	baseDomain      string
+	publicScheme    string
 	sshHost         string
 	sshUser         string
+	sshPort         int
 	databasePath    string
 	apiAddr         string
 	ingressAddr     string
@@ -93,8 +97,10 @@ func loadConfig() (config, error) {
 	cfg := config{
 		apiToken:        os.Getenv("ISEELOCAL_API_TOKEN"),
 		baseDomain:      os.Getenv("ISEELOCAL_BASE_DOMAIN"),
+		publicScheme:    getenv("ISEELOCAL_PUBLIC_SCHEME", "https"),
 		sshHost:         os.Getenv("ISEELOCAL_SSH_HOST"),
 		sshUser:         getenv("ISEELOCAL_SSH_USER", "tunnel"),
+		sshPort:         getenvInt("ISEELOCAL_SSH_PORT", 22),
 		databasePath:    getenv("ISEELOCAL_DATABASE", "./iseelocal.db"),
 		apiAddr:         getenv("ISEELOCAL_API_ADDR", "127.0.0.1:8081"),
 		ingressAddr:     getenv("ISEELOCAL_INGRESS_ADDR", "127.0.0.1:8080"),
@@ -109,6 +115,9 @@ func loadConfig() (config, error) {
 	}
 	if cfg.sshHost == "" {
 		return config{}, fmt.Errorf("ISEELOCAL_SSH_HOST is required")
+	}
+	if cfg.publicScheme != "http" && cfg.publicScheme != "https" {
+		return config{}, fmt.Errorf("ISEELOCAL_PUBLIC_SCHEME must be http or https")
 	}
 	return cfg, nil
 }

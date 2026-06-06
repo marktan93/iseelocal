@@ -22,6 +22,25 @@ func TestNormalizeSubdomainRejectsInvalidLabels(t *testing.T) {
 	}
 }
 
+func TestNormalizeUpstreamHostAcceptsHerdHost(t *testing.T) {
+	got, err := NormalizeUpstreamHost(" PhpMyAdmin.Test ")
+	if err != nil {
+		t.Fatalf("NormalizeUpstreamHost returned error: %v", err)
+	}
+	if got != "phpmyadmin.test" {
+		t.Fatalf("expected phpmyadmin.test, got %q", got)
+	}
+}
+
+func TestNormalizeUpstreamHostRejectsURLOrPort(t *testing.T) {
+	cases := []string{"http://phpmyadmin.test", "phpmyadmin.test:80", "phpmyadmin/test", "bad name.test"}
+	for _, input := range cases {
+		if _, err := NormalizeUpstreamHost(input); err == nil {
+			t.Fatalf("expected %q to be invalid", input)
+		}
+	}
+}
+
 func TestValidateLocalTargetAllowsLoopbackHTTPPort(t *testing.T) {
 	target := LocalTarget{Host: "127.0.0.1", Port: 3000, Protocol: "http"}
 	if err := ValidateLocalTarget(target, false); err != nil {

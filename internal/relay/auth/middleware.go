@@ -10,6 +10,10 @@ import (
 
 func BearerMiddleware(token string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasPrefix(r.URL.Path, "/api/") {
+			next.ServeHTTP(w, r)
+			return
+		}
 		header := r.Header.Get("Authorization")
 		if token == "" || header != "Bearer "+token {
 			writeAuthError(w)

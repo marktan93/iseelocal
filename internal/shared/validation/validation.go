@@ -12,6 +12,7 @@ import (
 type LocalTarget = contracts.LocalTarget
 
 var subdomainPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])$`)
+var hostLabelPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
 
 var sensitivePorts = map[int]string{
 	22:    "SSH",
@@ -28,6 +29,29 @@ func NormalizeSubdomain(input string) (string, error) {
 	}
 	if !subdomainPattern.MatchString(value) {
 		return "", fmt.Errorf("subdomain must be a DNS label using letters, numbers, or hyphens")
+	}
+	return value, nil
+}
+
+func NormalizeUpstreamHost(input string) (string, error) {
+	value := strings.ToLower(strings.TrimSpace(input))
+	if value == "" {
+		return "", nil
+	}
+	if strings.ContainsAny(value, "/\\:@ \t\r\n") {
+		return "", fmt.Errorf("upstream host must be a hostname without scheme, port, path, or whitespace")
+	}
+	if len(value) > 253 {
+		return "", fmt.Errorf("upstream host must be 253 characters or fewer")
+	}
+	labels := strings.Split(value, ".")
+	for _, label := range labels {
+		if len(label) < 1 || len(label) > 63 {
+			return "", fmt.Errorf("upstream host must contain valid DNS labels")
+		}
+		if !hostLabelPattern.MatchString(label) {
+			return "", fmt.Errorf("upstream host must contain valid DNS labels")
+		}
 	}
 	return value, nil
 }

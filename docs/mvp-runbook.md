@@ -36,6 +36,8 @@ sudo caddy validate --config /etc/caddy/Caddyfile
 sudo systemctl reload caddy
 ```
 
+For a Docker-based VPS setup with Caddy, relay, and a restricted tunnel SSHD in Compose, see `docs/docker-vps.md`.
+
 ## 4. Create A Route
 
 ```bash
@@ -56,6 +58,7 @@ On the desktop, with a local app running on port `3000`:
 ./dist/iseelocal-agent run-ssh \
   --ssh-user tunnel \
   --ssh-host your-vps.com \
+  --ssh-port 22 \
   --remote-port 18080 \
   --local-port 3000
 ```

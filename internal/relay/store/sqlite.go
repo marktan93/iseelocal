@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS routes (
 	public_url TEXT NOT NULL,
 	local_host TEXT NOT NULL,
 	local_port INTEGER NOT NULL,
+	upstream_host TEXT NOT NULL DEFAULT '',
 	remote_host TEXT NOT NULL,
 	remote_port INTEGER NOT NULL UNIQUE,
 	protocol TEXT NOT NULL,
@@ -55,24 +56,27 @@ CREATE TABLE IF NOT EXISTS routes (
 );
 CREATE INDEX IF NOT EXISTS idx_routes_public_host ON routes(public_host);
 `)
-	return err
+	if err != nil {
+		return err
+	}
+	return s.ensureColumn("routes", "upstream_host", "TEXT NOT NULL DEFAULT ''")
 }
 
 func (s *SQLiteStore) CreateRoute(route contracts.Route) error {
 	_, err := s.db.Exec(`
 INSERT INTO routes (
 	id, subdomain, public_host, public_url, local_host, local_port,
-	remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	upstream_host, remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `, route.ID, route.Subdomain, strings.ToLower(route.PublicHost), route.PublicURL, route.LocalHost, route.LocalPort,
-		route.RemoteHost, route.RemotePort, route.Protocol, route.Status, formatTime(route.CreatedAt), formatTime(route.UpdatedAt), formatOptionalTime(route.LastHeartbeatAt))
+		route.UpstreamHost, route.RemoteHost, route.RemotePort, route.Protocol, route.Status, formatTime(route.CreatedAt), formatTime(route.UpdatedAt), formatOptionalTime(route.LastHeartbeatAt))
 	return err
 }
 
 func (s *SQLiteStore) ListRoutes() ([]contracts.Route, error) {
 	rows, err := s.db.Query(`
 SELECT id, subdomain, public_host, public_url, local_host, local_port,
-	remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
+	upstream_host, remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
 FROM routes
 ORDER BY created_at DESC
 `)
@@ -153,7 +157,7 @@ func (s *SQLiteStore) Heartbeat(id string) error {
 func (s *SQLiteStore) getRoute(where string, arg any) (contracts.Route, error) {
 	row := s.db.QueryRow(`
 SELECT id, subdomain, public_host, public_url, local_host, local_port,
-	remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
+	upstream_host, remote_host, remote_port, protocol, status, created_at, updated_at, last_heartbeat_at
 FROM routes
 WHERE `+where+`
 LIMIT 1
@@ -182,6 +186,7 @@ func scanRoute(scanner routeScanner) (contracts.Route, error) {
 		&route.PublicURL,
 		&route.LocalHost,
 		&route.LocalPort,
+		&route.UpstreamHost,
 		&route.RemoteHost,
 		&route.RemotePort,
 		&route.Protocol,
@@ -211,6 +216,33 @@ func scanRoute(scanner routeScanner) (contracts.Route, error) {
 		route.LastHeartbeatAt = &value
 	}
 	return route, nil
+}
+
+func (s *SQLiteStore) ensureColumn(table string, column string, definition string) error {
+	rows, err := s.db.Query(`PRAGMA table_info(` + table + `)`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name string
+		var columnType string
+		var notNull int
+		var defaultValue sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &pk); err != nil {
+			return err
+		}
+		if name == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = s.db.Exec(`ALTER TABLE ` + table + ` ADD COLUMN ` + column + ` ` + definition)
+	return err
 }
 
 func formatTime(t time.Time) string {

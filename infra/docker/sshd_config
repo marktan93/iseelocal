@@ -1,0 +1,25 @@
+Port 22
+Protocol 2
+
+HostKey /etc/ssh/host_keys/ssh_host_ed25519_key
+HostKey /etc/ssh/host_keys/ssh_host_rsa_key
+
+AllowUsers tunnel
+PasswordAuthentication no
+PermitRootLogin no
+PubkeyAuthentication yes
+AuthenticationMethods publickey
+
+AllowTcpForwarding remote
+GatewayPorts no
+PermitListen 127.0.0.1:*
+X11Forwarding no
+AllowAgentForwarding no
+PermitTTY no
+PermitTunnel no
+ForceCommand /bin/false
+
+ClientAliveInterval 30
+ClientAliveCountMax 3
+MaxSessions 10
+LogLevel VERBOSE

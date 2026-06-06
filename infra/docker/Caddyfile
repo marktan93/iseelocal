@@ -1,0 +1,14 @@
+http://api.{$ISEELOCAL_BASE_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy tunnel-sshd:8081
+}
+
+http://*.{$ISEELOCAL_BASE_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy tunnel-sshd:8080
+}
+
+http:// {
+    encode zstd gzip
+    reverse_proxy tunnel-sshd:8081
+}

@@ -94,6 +94,7 @@ func parseTunnelSpec(name string, args []string) (agentssh.TunnelSpec, error) {
 	fs := flag.NewFlagSet(name, flag.ExitOnError)
 	sshUser := fs.String("ssh-user", "tunnel", "SSH tunnel user")
 	sshHost := fs.String("ssh-host", "", "SSH host")
+	sshPort := fs.Int("ssh-port", 22, "SSH port")
 	remoteHost := fs.String("remote-host", "127.0.0.1", "remote bind host")
 	remotePort := fs.Int("remote-port", 0, "remote bind port")
 	localHost := fs.String("local-host", "127.0.0.1", "local target host")
@@ -104,6 +105,7 @@ func parseTunnelSpec(name string, args []string) (agentssh.TunnelSpec, error) {
 	return agentssh.TunnelSpec{
 		SSHUser:    *sshUser,
 		SSHHost:    *sshHost,
+		SSHPort:    *sshPort,
 		RemoteHost: *remoteHost,
 		RemotePort: *remotePort,
 		LocalHost:  *localHost,
@@ -114,6 +116,6 @@ func parseTunnelSpec(name string, args []string) (agentssh.TunnelSpec, error) {
 func usage() error {
 	return fmt.Errorf(`usage:
 	iseelocal-agent check --host 127.0.0.1 --port 3000
-	iseelocal-agent ssh-args --ssh-host vps.example.com --remote-port 18080 --local-port 3000
-	iseelocal-agent run-ssh --ssh-host vps.example.com --remote-port 18080 --local-port 3000`)
+	iseelocal-agent ssh-args --ssh-host vps.example.com --ssh-port 2222 --remote-port 18080 --local-port 3000
+	iseelocal-agent run-ssh --ssh-host vps.example.com --ssh-port 2222 --remote-port 18080 --local-port 3000`)
 }

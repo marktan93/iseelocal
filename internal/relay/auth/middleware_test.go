@@ -42,3 +42,23 @@ func TestBearerMiddlewareRejectsInvalidToken(t *testing.T) {
 		t.Fatalf("expected 401, got %d", res.Code)
 	}
 }
+
+func TestBearerMiddlewareAllowsNonAPIPaths(t *testing.T) {
+	called := false
+	handler := BearerMiddleware("secret", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	if !called {
+		t.Fatal("expected dashboard handler to be called")
+	}
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", res.Code)
+	}
+}

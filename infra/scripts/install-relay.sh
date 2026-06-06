@@ -16,8 +16,10 @@ if [[ ! -f /etc/iseelocal/relay.env ]]; then
   cat >/etc/iseelocal/relay.env <<'ENV'
 ISEELOCAL_API_TOKEN=replace-with-a-long-random-token
 ISEELOCAL_BASE_DOMAIN=yourdomain.com
+ISEELOCAL_PUBLIC_SCHEME=https
 ISEELOCAL_SSH_HOST=your-vps.com
 ISEELOCAL_SSH_USER=tunnel
+ISEELOCAL_SSH_PORT=22
 ISEELOCAL_DATABASE=/var/lib/iseelocal/iseelocal.db
 ISEELOCAL_API_ADDR=127.0.0.1:8081
 ISEELOCAL_INGRESS_ADDR=127.0.0.1:8080

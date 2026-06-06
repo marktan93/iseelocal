@@ -13,3 +13,5 @@ target/
 /iseelocal-relay
 apps/desktop/src-tauri/gen/
 apps/desktop/src-tauri/target/
+infra/docker/relay.env
+infra/docker/ssh/authorized_keys

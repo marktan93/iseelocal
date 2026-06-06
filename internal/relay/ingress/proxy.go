@@ -53,6 +53,10 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
 		originalDirector(req)
+		if route.UpstreamHost != "" {
+			req.Host = route.UpstreamHost
+			req.Header.Set("Host", route.UpstreamHost)
+		}
 		req.Header.Set("X-Forwarded-Host", host)
 		req.Header.Set("X-Iseelocal-Route", route.ID)
 	}

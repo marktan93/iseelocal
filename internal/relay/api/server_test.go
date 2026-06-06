@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"iseelocal/internal/relay/ports"
 	"iseelocal/internal/relay/store"
@@ -24,6 +25,7 @@ func TestServerCreatesRoute(t *testing.T) {
 		BaseDomain: "example.com",
 		SSHHost:    "vps.example.com",
 		SSHUser:    "tunnel",
+		SSHPort:    2222,
 	}, st, ports.NewAllocator(18080, 18090))
 
 	body := bytes.NewBufferString(`{"subdomain":"MyApp","local_host":"127.0.0.1","local_port":3000,"protocol":"http"}`)
@@ -41,8 +43,106 @@ func TestServerCreatesRoute(t *testing.T) {
 		t.Fatalf("decode response: %v", err)
 	}
 
-	if created.PublicURL != "https://myapp.example.com" || created.RemotePort != 18080 {
+	if created.PublicURL != "https://myapp.example.com" || created.RemotePort != 18080 || created.SSHPort != 2222 {
 		t.Fatalf("unexpected response: %#v", created)
+	}
+}
+
+func TestServerRendersDashboard(t *testing.T) {
+	st, err := store.OpenSQLite(t.TempDir() + "/routes.db")
+	if err != nil {
+		t.Fatalf("OpenSQLite returned error: %v", err)
+	}
+	defer st.Close()
+
+	now := time.Now().UTC()
+	route := contracts.Route{
+		ID:           "route_dashboard",
+		Subdomain:    "phpmyadmin",
+		PublicHost:   "phpmyadmin.example.com",
+		PublicURL:    "http://phpmyadmin.example.com",
+		LocalHost:    "127.0.0.1",
+		LocalPort:    80,
+		UpstreamHost: "phpmyadmin.test",
+		RemoteHost:   "127.0.0.1",
+		RemotePort:   18080,
+		Protocol:     "http",
+		Status:       contracts.RouteStatusOnline,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	if err := st.CreateRoute(route); err != nil {
+		t.Fatalf("CreateRoute returned error: %v", err)
+	}
+
+	server := NewServer(Config{BaseDomain: "example.com", SSHHost: "vps.example.com", SSHPort: 2222}, st, ports.NewAllocator(18080, 18090))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	body := res.Body.String()
+	if !strings.Contains(body, "iseelocal VPS Dashboard") || !strings.Contains(body, "phpmyadmin.test") || !strings.Contains(body, "http://phpmyadmin.example.com") {
+		t.Fatalf("dashboard did not include expected route details: %s", body)
+	}
+}
+
+func TestServerCreatesRouteWithUpstreamHost(t *testing.T) {
+	st, err := store.OpenSQLite(t.TempDir() + "/routes.db")
+	if err != nil {
+		t.Fatalf("OpenSQLite returned error: %v", err)
+	}
+	defer st.Close()
+
+	server := NewServer(Config{BaseDomain: "example.com", SSHHost: "vps.example.com", SSHUser: "tunnel"}, st, ports.NewAllocator(18080, 18090))
+
+	body := bytes.NewBufferString(`{"subdomain":"phpmyadmin","local_host":"127.0.0.1","local_port":80,"upstream_host":"PhpMyAdmin.Test","protocol":"http","allow_sensitive_target":true}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/routes", body)
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", res.Code, res.Body.String())
+	}
+
+	route, err := st.GetRouteByHost("phpmyadmin.example.com")
+	if err != nil {
+		t.Fatalf("GetRouteByHost returned error: %v", err)
+	}
+	if route.UpstreamHost != "phpmyadmin.test" {
+		t.Fatalf("expected upstream host phpmyadmin.test, got %q", route.UpstreamHost)
+	}
+}
+
+func TestServerCreatesRouteWithHTTPPublicScheme(t *testing.T) {
+	st, err := store.OpenSQLite(t.TempDir() + "/routes.db")
+	if err != nil {
+		t.Fatalf("OpenSQLite returned error: %v", err)
+	}
+	defer st.Close()
+
+	server := NewServer(Config{BaseDomain: "example.com", PublicScheme: "http", SSHHost: "vps.example.com", SSHUser: "tunnel"}, st, ports.NewAllocator(18080, 18090))
+
+	body := bytes.NewBufferString(`{"subdomain":"myapp","local_host":"127.0.0.1","local_port":3000,"protocol":"http"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/routes", body)
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d: %s", res.Code, res.Body.String())
+	}
+
+	var created contracts.CreateRouteResponse
+	if err := json.NewDecoder(res.Body).Decode(&created); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if created.PublicURL != "http://myapp.example.com" {
+		t.Fatalf("unexpected public URL: %q", created.PublicURL)
 	}
 }
 

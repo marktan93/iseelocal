@@ -1,0 +1,55 @@
+name: iseelocal
+
+services:
+  tunnel-sshd:
+    build:
+      context: ../..
+      dockerfile: infra/docker/sshd.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${ISEELOCAL_SSH_PORT:-2222}:22"
+    volumes:
+      - ssh-host-keys:/etc/ssh/host_keys
+      - ./ssh:/authorized_keys:ro
+    networks:
+      - iseelocal
+
+  relay:
+    build:
+      context: ../..
+      dockerfile: infra/docker/relay.Dockerfile
+    restart: unless-stopped
+    user: "0:0"
+    depends_on:
+      - tunnel-sshd
+    env_file:
+      - ./relay.env
+    volumes:
+      - relay-data:/var/lib/iseelocal
+    network_mode: service:tunnel-sshd
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      - relay
+    env_file:
+      - ./relay.env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - iseelocal
+
+networks:
+  iseelocal:
+
+volumes:
+  relay-data:
+  ssh-host-keys:
+  caddy-data:
+  caddy-config:

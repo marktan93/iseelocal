@@ -22,6 +22,7 @@ type Route struct {
 	PublicURL       string      `json:"public_url"`
 	LocalHost       string      `json:"local_host"`
 	LocalPort       int         `json:"local_port"`
+	UpstreamHost    string      `json:"upstream_host,omitempty"`
 	RemoteHost      string      `json:"remote_host"`
 	RemotePort      int         `json:"remote_port"`
 	Protocol        string      `json:"protocol"`
@@ -35,6 +36,7 @@ type CreateRouteRequest struct {
 	Subdomain            string `json:"subdomain"`
 	LocalHost            string `json:"local_host"`
 	LocalPort            int    `json:"local_port"`
+	UpstreamHost         string `json:"upstream_host,omitempty"`
 	Protocol             string `json:"protocol"`
 	AllowSensitiveTarget bool   `json:"allow_sensitive_target,omitempty"`
 }
@@ -46,6 +48,7 @@ type CreateRouteResponse struct {
 	RemotePort int    `json:"remote_port"`
 	SSHUser    string `json:"ssh_user"`
 	SSHHost    string `json:"ssh_host"`
+	SSHPort    int    `json:"ssh_port,omitempty"`
 }
 
 type RoutesResponse struct {
