@@ -101,7 +101,12 @@ def discover_projects(config_path: Path, excludes: set[str]) -> list[dict[str, s
         root = Path(str(raw_root)).expanduser()
         if not root.is_dir():
             continue
-        for child in sorted(root.iterdir(), key=lambda item: item.name.lower()):
+        try:
+            children = sorted(root.iterdir(), key=lambda item: item.name.lower())
+        except OSError as err:
+            print(f"skipping unreadable Herd path {root}: {err}", file=sys.stderr)
+            continue
+        for child in children:
             if child.name.startswith(".") or child.name in excludes or not is_dir(child):
                 continue
             if not has_project_marker(child):
