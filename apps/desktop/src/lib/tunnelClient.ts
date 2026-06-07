@@ -9,6 +9,7 @@ declare global {
 }
 
 let demoPort = 18080;
+const demoBaseDomain = "iseelocal.dev";
 
 export function createDefaultTunnelClient(): TunnelClient {
   if (typeof window !== "undefined" && window.__TAURI_INTERNALS__) {
@@ -39,7 +40,7 @@ const demoClient: TunnelClient = {
     return {
       id: `route_${crypto.randomUUID?.() ?? Date.now()}`,
       subdomain,
-      publicUrl: `https://${subdomain}.example.com`,
+      publicUrl: `https://${subdomain}.${demoBaseDomain}`,
       localHost: input.localHost,
       localPort: input.localPort,
       remoteHost: "127.0.0.1",

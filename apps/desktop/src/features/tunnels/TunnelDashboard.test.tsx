@@ -10,7 +10,7 @@ function client(overrides: Partial<TunnelClient> = {}): TunnelClient {
     createRoute: vi.fn(async (input) => ({
       id: "route_1",
       subdomain: input.subdomain.toLowerCase(),
-      publicUrl: `https://${input.subdomain.toLowerCase()}.example.com`,
+      publicUrl: `https://${input.subdomain.toLowerCase()}.iseelocal.dev`,
       localHost: input.localHost,
       localPort: input.localPort,
       remoteHost: "127.0.0.1",
@@ -29,7 +29,7 @@ function route(overrides: Partial<TunnelRoute> = {}): TunnelRoute {
   return {
     id: "route_1",
     subdomain: "myapp",
-    publicUrl: "https://myapp.example.com",
+    publicUrl: "https://myapp.iseelocal.dev",
     localHost: "127.0.0.1",
     localPort: 3000,
     remoteHost: "127.0.0.1",
@@ -41,6 +41,13 @@ function route(overrides: Partial<TunnelRoute> = {}): TunnelRoute {
 }
 
 describe("TunnelDashboard", () => {
+  it("shows the configured relay endpoint", () => {
+    render(<TunnelDashboard client={client()} />);
+
+    expect(screen.getByText("152.42.204.9")).toBeInTheDocument();
+    expect(screen.getByText("*.iseelocal.dev")).toBeInTheDocument();
+  });
+
   it("adds a mapping and shows the public URL", async () => {
     const api = client();
     const user = userEvent.setup();
@@ -52,7 +59,7 @@ describe("TunnelDashboard", () => {
     await user.type(screen.getByLabelText("Local port"), "3000");
     await user.click(screen.getByRole("button", { name: "Add mapping" }));
 
-    expect(await screen.findByText("https://myapp.example.com")).toBeInTheDocument();
+    expect(await screen.findByText("https://myapp.iseelocal.dev")).toBeInTheDocument();
     expect(api.createRoute).toHaveBeenCalledWith({
       subdomain: "MyApp",
       localHost: "127.0.0.1",

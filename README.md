@@ -6,7 +6,7 @@
 
 ```text
 Browser
-  -> https://myapp.yourdomain.com
+  -> https://myapp.iseelocal.dev
   -> Caddy wildcard HTTPS
   -> iseelocal relay ingress
   -> 127.0.0.1:18080 on the VPS
@@ -51,7 +51,7 @@ Run the relay locally:
 ```bash
 ISEELOCAL_API_TOKEN=dev-token \
 ISEELOCAL_BASE_DOMAIN=localhost \
-ISEELOCAL_SSH_HOST=your-vps.com \
+ISEELOCAL_SSH_HOST=152.42.204.9 \
 go run ./cmd/iseelocal-relay
 ```
 

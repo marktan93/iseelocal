@@ -15,6 +15,8 @@ import (
 
 type Config struct {
 	MaxBodyBytes int64
+	BaseDomain   string
+	SSHHost      string
 }
 
 type Proxy struct {
@@ -31,6 +33,11 @@ func NewProxy(store store.Store, config Config) http.Handler {
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	host := normalizeHost(r.Host)
+	if p.isDashboardRequest(host, r.URL.Path) {
+		p.dashboard(w)
+		return
+	}
+
 	route, err := p.store.GetRouteByHost(host)
 	if err != nil {
 		status := http.StatusInternalServerError
@@ -62,6 +69,16 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, p.config.MaxBodyBytes)
 	proxy.ServeHTTP(w, r)
+}
+
+func (p *Proxy) isDashboardRequest(host string, path string) bool {
+	if path != "/" {
+		return false
+	}
+
+	baseDomain := normalizeHost(p.config.BaseDomain)
+	sshHost := normalizeHost(p.config.SSHHost)
+	return host != "" && (host == baseDomain || host == sshHost)
 }
 
 func normalizeHost(host string) string {

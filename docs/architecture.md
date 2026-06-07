@@ -14,7 +14,7 @@
 
 ```text
 User browser
-  -> https://myapp.yourdomain.com
+  -> https://myapp.iseelocal.dev
   -> Caddy wildcard vhost
   -> relay ingress on 127.0.0.1:8080
   -> route lookup by Host header

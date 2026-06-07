@@ -43,7 +43,11 @@ func run() error {
 		SSHUser:    cfg.sshUser,
 	}, st, ports.NewAllocator(cfg.remotePortStart, cfg.remotePortEnd)))
 
-	ingressHandler := accessLog(ingress.NewProxy(st, ingress.Config{MaxBodyBytes: 10 << 20}))
+	ingressHandler := accessLog(ingress.NewProxy(st, ingress.Config{
+		MaxBodyBytes: 10 << 20,
+		BaseDomain:   cfg.baseDomain,
+		SSHHost:      cfg.sshHost,
+	}))
 
 	apiServer := &http.Server{Addr: cfg.apiAddr, Handler: apiHandler}
 	ingressServer := &http.Server{Addr: cfg.ingressAddr, Handler: ingressHandler}

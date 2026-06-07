@@ -138,11 +138,11 @@ export function TunnelDashboard({ client, initialRoutes = [] }: TunnelDashboardP
           <span className="section-label">Relay</span>
           <div className="metric-row">
             <Server size={18} />
-            <span>your-vps.com</span>
+            <span>152.42.204.9</span>
           </div>
           <div className="metric-row">
             <Globe2 size={18} />
-            <span>*.example.com</span>
+            <span>*.iseelocal.dev</span>
           </div>
         </div>
 

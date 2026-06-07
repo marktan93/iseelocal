@@ -5,9 +5,9 @@
 Create DNS records pointing to the VPS:
 
 ```text
-A     yourdomain.com       <vps-ip>
-A     *.yourdomain.com     <vps-ip>
-A     api.yourdomain.com   <vps-ip>
+A     iseelocal.dev        152.42.204.9
+A     *.iseelocal.dev      152.42.204.9
+A     api.iseelocal.dev    152.42.204.9
 ```
 
 ## 2. Build Relay And Agent
@@ -29,7 +29,7 @@ sudo ./infra/scripts/create-tunnel-user.sh
 sudo ./infra/scripts/install-relay.sh ./dist/iseelocal-relay
 ```
 
-Copy `infra/caddy/Caddyfile.example` into `/etc/caddy/Caddyfile`, replace `yourdomain.com`, then reload Caddy:
+Copy `infra/caddy/Caddyfile.example` into `/etc/caddy/Caddyfile`, then reload Caddy:
 
 ```bash
 sudo caddy validate --config /etc/caddy/Caddyfile
@@ -39,7 +39,7 @@ sudo systemctl reload caddy
 ## 4. Create A Route
 
 ```bash
-curl -sS -X POST https://api.yourdomain.com/api/routes \
+curl -sS -X POST https://api.iseelocal.dev/api/routes \
   -H "Authorization: Bearer $ISEELOCAL_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"subdomain":"myapp","local_host":"127.0.0.1","local_port":3000,"protocol":"http"}'
@@ -55,7 +55,7 @@ On the desktop, with a local app running on port `3000`:
 ./dist/iseelocal-agent check --host 127.0.0.1 --port 3000
 ./dist/iseelocal-agent run-ssh \
   --ssh-user tunnel \
-  --ssh-host your-vps.com \
+  --ssh-host 152.42.204.9 \
   --remote-port 18080 \
   --local-port 3000
 ```
@@ -63,12 +63,12 @@ On the desktop, with a local app running on port `3000`:
 Then mark the route online:
 
 ```bash
-curl -sS -X POST https://api.yourdomain.com/api/routes/route_id/heartbeat \
+curl -sS -X POST https://api.iseelocal.dev/api/routes/route_id/heartbeat \
   -H "Authorization: Bearer $ISEELOCAL_API_TOKEN"
 ```
 
 Open:
 
 ```text
-https://myapp.yourdomain.com
+https://myapp.iseelocal.dev
 ```

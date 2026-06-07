@@ -17,7 +17,7 @@ The MVP defaults to a private single-user deployment.
 
 Keep `GatewayPorts no` for the tunnel user. Public exposure should happen through Caddy and the Go ingress proxy, not direct `0.0.0.0` remote binds.
 
-Use a dedicated SSH key for `tunnel@your-vps.com`. Do not reuse a personal admin key.
+Use a dedicated SSH key for `tunnel@152.42.204.9`. Do not reuse a personal admin key.
 
 ## Before Public SaaS
 
