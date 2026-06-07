@@ -48,6 +48,44 @@ func TestServerCreatesRoute(t *testing.T) {
 	}
 }
 
+func TestServerTLSAskAllowsBaseDomainSubdomains(t *testing.T) {
+	st, err := store.OpenSQLite(t.TempDir() + "/routes.db")
+	if err != nil {
+		t.Fatalf("OpenSQLite returned error: %v", err)
+	}
+	defer st.Close()
+
+	server := NewServer(Config{BaseDomain: "iseelocal.dev"}, st, ports.NewAllocator(18080, 18090))
+	for _, domain := range []string{"iseelocal.dev", "api.iseelocal.dev", "bookkeeping-system.iseelocal.dev"} {
+		req := httptest.NewRequest(http.MethodGet, "/api/tls-ask?domain="+domain, nil)
+		res := httptest.NewRecorder()
+
+		server.ServeHTTP(res, req)
+
+		if res.Code != http.StatusNoContent {
+			t.Fatalf("expected %s to be allowed, got %d", domain, res.Code)
+		}
+	}
+}
+
+func TestServerTLSAskRejectsOtherDomains(t *testing.T) {
+	st, err := store.OpenSQLite(t.TempDir() + "/routes.db")
+	if err != nil {
+		t.Fatalf("OpenSQLite returned error: %v", err)
+	}
+	defer st.Close()
+
+	server := NewServer(Config{BaseDomain: "iseelocal.dev"}, st, ports.NewAllocator(18080, 18090))
+	req := httptest.NewRequest(http.MethodGet, "/api/tls-ask?domain=attacker.example.com", nil)
+	res := httptest.NewRecorder()
+
+	server.ServeHTTP(res, req)
+
+	if res.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", res.Code)
+	}
+}
+
 func TestServerRendersDashboard(t *testing.T) {
 	st, err := store.OpenSQLite(t.TempDir() + "/routes.db")
 	if err != nil {
@@ -59,8 +97,8 @@ func TestServerRendersDashboard(t *testing.T) {
 	route := contracts.Route{
 		ID:           "route_dashboard",
 		Subdomain:    "phpmyadmin",
-		PublicHost:   "phpmyadmin.example.com",
-		PublicURL:    "http://phpmyadmin.example.com",
+		PublicHost:   "phpmyadmin.152.42.204.9.sslip.io",
+		PublicURL:    "http://phpmyadmin.152.42.204.9.sslip.io",
 		ProjectName:  "phpMyAdmin",
 		ProjectPath:  "/Users/whoami/Desktop/scripts/phpmyadmin",
 		LocalHost:    "127.0.0.1",
@@ -77,7 +115,7 @@ func TestServerRendersDashboard(t *testing.T) {
 		t.Fatalf("CreateRoute returned error: %v", err)
 	}
 
-	server := NewServer(Config{BaseDomain: "example.com", SSHHost: "vps.example.com", SSHPort: 2222}, st, ports.NewAllocator(18080, 18090))
+	server := NewServer(Config{BaseDomain: "iseelocal.dev", PublicScheme: "https", SSHHost: "152.42.204.9", SSHPort: 2222}, st, ports.NewAllocator(18080, 18090))
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	res := httptest.NewRecorder()
 
@@ -89,11 +127,18 @@ func TestServerRendersDashboard(t *testing.T) {
 	body := res.Body.String()
 	if !strings.Contains(body, "iseelocal VPS Dashboard") ||
 		!strings.Contains(body, "phpMyAdmin") ||
+		!strings.Contains(body, "iseelocal.dev") ||
+		!strings.Contains(body, "152.42.204.9:2222") ||
 		!strings.Contains(body, "/Users/whoami/Desktop/scripts/phpmyadmin") ||
+		!strings.Contains(body, "Herd virtual host") ||
 		!strings.Contains(body, "phpmyadmin.test") ||
-		!strings.Contains(body, "http://phpmyadmin.example.com") ||
-		!strings.Contains(body, "<iframe") {
+		!strings.Contains(body, "https://phpmyadmin.iseelocal.dev") ||
+		!strings.Contains(body, ".preview { display:block;") ||
+		!strings.Contains(body, ".preview iframe { position:absolute;") {
 		t.Fatalf("dashboard did not include expected route details: %s", body)
+	}
+	if strings.Contains(body, "152.42.204.9.sslip.io") {
+		t.Fatalf("dashboard should derive public URLs from current base domain: %s", body)
 	}
 }
 

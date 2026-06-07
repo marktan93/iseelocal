@@ -1,13 +1,18 @@
 {
-    email admin@yourdomain.com
+    email admin@iseelocal.dev
 }
 
-*.yourdomain.com {
+iseelocal.dev {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8081
+}
+
+*.iseelocal.dev {
     encode zstd gzip
     reverse_proxy 127.0.0.1:8080
 }
 
-api.yourdomain.com {
+api.iseelocal.dev {
     encode zstd gzip
     reverse_proxy 127.0.0.1:8081
 }

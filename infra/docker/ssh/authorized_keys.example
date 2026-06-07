@@ -1,1 +1,1 @@
-restrict,port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAA_REPLACE_WITH_DESKTOP_PUBLIC_KEY iseelocal-desktop
+command="/bin/false",restrict,port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAA_REPLACE_WITH_DESKTOP_PUBLIC_KEY iseelocal-desktop

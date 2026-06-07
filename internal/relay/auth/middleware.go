@@ -14,6 +14,10 @@ func BearerMiddleware(token string, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		if r.URL.Path == "/api/tls-ask" && r.Method == http.MethodGet {
+			next.ServeHTTP(w, r)
+			return
+		}
 		header := r.Header.Get("Authorization")
 		if token == "" || header != "Bearer "+token {
 			writeAuthError(w)

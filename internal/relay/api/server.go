@@ -39,6 +39,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case (r.URL.Path == "/" || r.URL.Path == "/dashboard") && r.Method == http.MethodGet:
 		s.dashboard(w, r)
+	case r.URL.Path == "/api/tls-ask" && r.Method == http.MethodGet:
+		s.tlsAsk(w, r)
 	case r.URL.Path == "/api/health" && r.Method == http.MethodGet:
 		writeJSON(w, http.StatusOK, contracts.HealthResponse{Status: "ok"})
 	case r.URL.Path == "/api/routes" && r.Method == http.MethodPost:
@@ -52,6 +54,16 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) tlsAsk(w http.ResponseWriter, r *http.Request) {
+	domain := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("domain")))
+	baseDomain := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(s.config.BaseDomain), "."))
+	if domain == baseDomain || domain == "api."+baseDomain || strings.HasSuffix(domain, "."+baseDomain) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	http.Error(w, "domain not allowed", http.StatusForbidden)
+}
+
 func (s *Server) dashboard(w http.ResponseWriter, _ *http.Request) {
 	routes, err := s.store.ListRoutes()
 	if err != nil {
@@ -60,12 +72,13 @@ func (s *Server) dashboard(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	data := dashboardData{
-		BaseDomain: s.config.BaseDomain,
-		SSHHost:    s.config.SSHHost,
-		SSHPort:    s.config.SSHPort,
-		Routes:     routes,
-		Online:     countRoutes(routes, contracts.RouteStatusOnline),
-		UpdatedAt:  time.Now().UTC().Format(time.RFC3339),
+		BaseDomain:   s.config.BaseDomain,
+		PublicScheme: s.config.PublicScheme,
+		SSHHost:      s.config.SSHHost,
+		SSHPort:      s.config.SSHPort,
+		Routes:       routes,
+		Online:       countRoutes(routes, contracts.RouteStatusOnline),
+		UpdatedAt:    time.Now().UTC().Format(time.RFC3339),
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := dashboardTemplate.Execute(w, data); err != nil {
@@ -74,12 +87,13 @@ func (s *Server) dashboard(w http.ResponseWriter, _ *http.Request) {
 }
 
 type dashboardData struct {
-	BaseDomain string
-	SSHHost    string
-	SSHPort    int
-	Routes     []contracts.Route
-	Online     int
-	UpdatedAt  string
+	BaseDomain   string
+	PublicScheme string
+	SSHHost      string
+	SSHPort      int
+	Routes       []contracts.Route
+	Online       int
+	UpdatedAt    string
 }
 
 func countRoutes(routes []contracts.Route, status contracts.RouteStatus) int {
@@ -105,6 +119,17 @@ var dashboardTemplate = template.Must(template.New("dashboard").Funcs(template.F
 		}
 		return fmt.Sprintf("%s:%d", route.LocalHost, route.LocalPort)
 	},
+	"publicURL": func(route contracts.Route, scheme string, baseDomain string) string {
+		subdomain := strings.TrimSpace(route.Subdomain)
+		domain := strings.TrimPrefix(strings.TrimSpace(baseDomain), ".")
+		if subdomain != "" && domain != "" {
+			if scheme != "http" && scheme != "https" {
+				scheme = "https"
+			}
+			return fmt.Sprintf("%s://%s.%s", scheme, subdomain, domain)
+		}
+		return route.PublicURL
+	},
 }).Parse(`<!doctype html>
 <html lang="en">
 <head>
@@ -114,23 +139,24 @@ var dashboardTemplate = template.Must(template.New("dashboard").Funcs(template.F
   <title>iseelocal VPS Dashboard</title>
   <style>
     :root { color-scheme: dark; --bg:#07111f; --panel:#0f1b2d; --muted:#8ea3bd; --line:#1f314a; --ok:#28d17c; --off:#f5b84b; --text:#eaf2ff; --accent:#7cc7ff; }
+    * { box-sizing:border-box; }
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
-    main { max-width:1320px; margin:0 auto; padding:32px 20px; }
+    main { max-width:1320px; margin:0 auto; padding:24px 20px 36px; }
     header { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; margin-bottom:24px; }
     h1 { margin:0 0 8px; font-size:28px; }
     .muted { color:var(--muted); }
     .cards { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:22px; }
     .card, .route-card { background:var(--panel); border:1px solid var(--line); border-radius:16px; }
-    .card { padding:16px; }
-    .card strong { display:block; font-size:24px; margin-bottom:4px; }
-    .route-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:16px; }
+    .card { min-width:0; padding:16px; }
+    .card strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:24px; margin-bottom:4px; }
+    .route-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:16px; align-items:start; }
     .route-card { overflow:hidden; }
-    .preview { position:relative; height:220px; overflow:hidden; background:#050b14; border-bottom:1px solid var(--line); }
-    .preview iframe { width:1440px; height:880px; border:0; transform:scale(.26); transform-origin:0 0; pointer-events:none; background:white; }
+    .preview { display:block; position:relative; height:220px; overflow:hidden; background:#050b14; border-bottom:1px solid var(--line); }
+    .preview iframe { position:absolute; top:0; left:0; width:1440px; height:880px; border:0; transform:scale(.27); transform-origin:0 0; pointer-events:none; background:white; }
     .preview-overlay { position:absolute; inset:0; box-shadow:inset 0 -80px 70px rgba(7,17,31,.85); pointer-events:none; }
     .route-body { padding:16px; }
     .route-title { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
-    .route-title h2 { margin:0; font-size:18px; line-height:1.25; }
+    .route-title h2 { margin:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:18px; line-height:1.25; }
     .meta { display:grid; gap:8px; margin-top:12px; }
     .meta-row { display:grid; grid-template-columns:92px minmax(0,1fr); gap:10px; align-items:start; }
     .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.07em; }
@@ -143,7 +169,7 @@ var dashboardTemplate = template.Must(template.New("dashboard").Funcs(template.F
     .online .dot { background:var(--ok); box-shadow:0 0 14px var(--ok); }
     .empty { padding:18px; background:var(--panel); border:1px solid var(--line); border-radius:16px; }
     @media (max-width: 900px) { .cards { grid-template-columns:repeat(2,minmax(0,1fr)); } .route-grid { grid-template-columns:1fr; } }
-    @media (max-width: 640px) { header { display:block; } .cards { grid-template-columns:1fr; } .preview { height:170px; } .preview iframe { transform:scale(.2); } }
+    @media (max-width: 640px) { header { display:block; } .cards { grid-template-columns:1fr; } .route-grid { grid-template-columns:minmax(0,1fr); } .preview { height:170px; } .preview iframe { transform:scale(.2); } }
   </style>
 </head>
 <body>
@@ -165,8 +191,8 @@ var dashboardTemplate = template.Must(template.New("dashboard").Funcs(template.F
   <section class="route-grid">
     {{range .Routes}}
     <article class="route-card">
-      <a class="preview" href="{{.PublicURL}}" target="_blank" rel="noreferrer" aria-label="Open {{projectTitle .}}">
-        <iframe src="{{.PublicURL}}" loading="lazy" title="{{projectTitle .}} preview"></iframe>
+      <a class="preview" href="{{publicURL . $.PublicScheme $.BaseDomain}}" target="_blank" rel="noreferrer" aria-label="Open {{projectTitle .}}">
+        <iframe src="{{publicURL . $.PublicScheme $.BaseDomain}}" loading="lazy" title="{{projectTitle .}} preview"></iframe>
         <span class="preview-overlay"></span>
       </a>
       <div class="route-body">
@@ -175,8 +201,9 @@ var dashboardTemplate = template.Must(template.New("dashboard").Funcs(template.F
           <span class="status {{.Status}}"><span class="dot"></span>{{.Status}}</span>
         </div>
         <div class="meta">
-          <div class="meta-row"><span class="label">Public</span><span class="value"><a href="{{.PublicURL}}" target="_blank" rel="noreferrer">{{.PublicURL}}</a></span></div>
-          <div class="meta-row"><span class="label">Folder</span><span class="value">{{if .ProjectPath}}<code>{{.ProjectPath}}</code>{{else}}<span class="muted">unknown</span>{{end}}</span></div>
+          <div class="meta-row"><span class="label">Public</span><span class="value"><a href="{{publicURL . $.PublicScheme $.BaseDomain}}" target="_blank" rel="noreferrer">{{publicURL . $.PublicScheme $.BaseDomain}}</a></span></div>
+          <div class="meta-row"><span class="label">Source</span><span class="value">{{if .UpstreamHost}}Herd virtual host <code>{{.UpstreamHost}}</code>{{else}}Direct localhost{{end}}</span></div>
+          <div class="meta-row"><span class="label">Folder</span><span class="value">{{if .ProjectPath}}<code>{{.ProjectPath}}</code>{{else}}<span class="muted">not recorded</span>{{end}}</span></div>
           <div class="meta-row"><span class="label">Target</span><span class="value"><code>{{targetHost .}}</code> <span class="muted">via {{.LocalHost}}:{{.LocalPort}}</span></span></div>
           <div class="meta-row"><span class="label">Remote</span><span class="value"><code>{{.RemoteHost}}:{{.RemotePort}}</code></span></div>
           <div class="meta-row"><span class="label">Heartbeat</span><span class="value">{{if .LastHeartbeatAt}}{{.LastHeartbeatAt.Format "2006-01-02 15:04:05 UTC"}}{{else}}<span class="muted">never</span>{{end}}</span></div>

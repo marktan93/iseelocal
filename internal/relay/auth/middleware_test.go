@@ -62,3 +62,23 @@ func TestBearerMiddlewareAllowsNonAPIPaths(t *testing.T) {
 		t.Fatalf("expected 200, got %d", res.Code)
 	}
 }
+
+func TestBearerMiddlewareAllowsTLSAskWithoutToken(t *testing.T) {
+	called := false
+	handler := BearerMiddleware("secret", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/tls-ask?domain=myapp.example.com", nil)
+	res := httptest.NewRecorder()
+
+	handler.ServeHTTP(res, req)
+
+	if !called {
+		t.Fatal("expected wrapped handler to be called")
+	}
+	if res.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", res.Code)
+	}
+}
