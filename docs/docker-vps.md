@@ -107,6 +107,17 @@ curl -sS -X POST http://api.yourdomain.com/api/routes \
 
 Then run the agent using the returned remote port and `--local-port 80`. Repeat with each Herd site name, for example `performance-track.test` or `lg-subscribe.test`.
 
+To keep VPS routes in sync with local Herd projects, run the Herd sync watcher on the Mac:
+
+```bash
+python3 infra/scripts/sync-herd-routes.py \
+  --ssh-key /path/to/vps-key.pem \
+  --vps-host 152.42.204.9 \
+  --watch-seconds 30
+```
+
+The watcher reads Herd's Valet config, creates missing `*.iseelocal.dev` routes, removes direct localhost-only routes, records each Herd folder and virtual host, and restarts one SSH reverse-forward process when the route set changes.
+
 ## Operations
 
 View logs:
